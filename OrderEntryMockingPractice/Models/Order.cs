@@ -11,5 +11,24 @@ namespace OrderEntryMockingPractice.Models
         
         public int? CustomerId { get; set; }
         public List<OrderItem> OrderItems { get; set; }
+
+        public bool OrderItemsAreUnique()
+        {
+            HashSet<string> uniqueItems = new HashSet<string>();
+            foreach (var orderItem in OrderItems)
+            {
+                var sku = orderItem.Product.Sku;
+                if (uniqueItems.Contains(sku))
+                {
+                    return false; 
+                }
+                else
+                {
+                    uniqueItems.Add(sku); 
+                }
+
+            }
+            return true; 
+        }
     }
 }
