@@ -14,9 +14,11 @@ namespace OrderEntryMockingPracticeTests
         [SetUp]
         public void BeforeEachTest()
         {
-             this.ProductRepository = Substitute.For<IProductRepository>();
+            this.ProductRepository = Substitute.For<IProductRepository>();
             this.OrderFulfillmentService = Substitute.For<IOrderFulfillmentService>();
-            this.OrderService = new OrderService(ProductRepository, OrderFulfillmentService);            
+            this.TaxRateService = Substitute.For<ITaxRateService>();
+            this.CustomerRepository = Substitute.For<ICustomerRepository>();
+            this.OrderService = new OrderService(ProductRepository, OrderFulfillmentService, TaxRateService, CustomerRepository);            
         }
 
         public OrderService OrderService { get; set; }
@@ -24,6 +26,10 @@ namespace OrderEntryMockingPracticeTests
         public IOrderFulfillmentService OrderFulfillmentService { get; set; }
 
         public IProductRepository ProductRepository { get; set; }
+
+        public ICustomerRepository CustomerRepository { get; set; }
+
+        public ITaxRateService TaxRateService { get; set; }
 
         [Test]
         public void ValidOrder()
@@ -72,10 +78,16 @@ namespace OrderEntryMockingPracticeTests
             // Arrange
             const string expectedOrderNumber = "12341234";
             const int expectedOrderId = 12345;
-
-            Order order = Substitute.For<Order>();
+            const int customerId = 123;
+            
+            var order = Substitute.For<Order>();
+            order.CustomerId = customerId;
             order.ContainsUniqueSkus().Returns(true);
             order.AllProductsInStock().Returns(true);
+
+            CustomerRepository.Get(customerId).Returns(new Customer()); 
+
+
 
             OrderFulfillmentService.Fulfill(order).Returns(new OrderConfirmation()
             {
@@ -83,6 +95,7 @@ namespace OrderEntryMockingPracticeTests
                 OrderId = expectedOrderId
             });
 
+            
 
             // Act
             var summary = OrderService.PlaceOrder(order);
@@ -110,14 +123,12 @@ namespace OrderEntryMockingPracticeTests
 
             OrderFulfillmentService.Fulfill(order).Returns(new OrderConfirmation());
 
-            var customerRepository = Substitute.For<ICustomerRepository>();
-            customerRepository.Get(customerId).Returns(new Customer()
+            CustomerRepository.Get(customerId).Returns(new Customer()
             {
                 PostalCode = postalCode,
                 Country = country
             });
 
-            var taxRateService = Substitute.For<ITaxRateService>();
             var taxEntries = new List<TaxEntry>()
             {
                 new TaxEntry()
@@ -131,7 +142,8 @@ namespace OrderEntryMockingPracticeTests
                     Rate = 0.2134m
                 }
             };
-            taxRateService.GetTaxEntries(postalCode, country).Returns(taxEntries);
+
+            TaxRateService.GetTaxEntries(postalCode, country).Returns(taxEntries);
 
             // Act
             var summary = OrderService.PlaceOrder(order);
