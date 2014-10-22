@@ -35,7 +35,15 @@ namespace OrderEntryMockingPracticeTests
         public void ValidOrder()
         {
             // Arrange
-            Order order = Substitute.For<Order>();
+            var customerId = 123;
+
+            var order = Substitute.For<Order>();
+            order.CustomerId = 123;
+
+            OrderFulfillmentService.Fulfill(order).Returns(new OrderConfirmation());
+            CustomerRepository.Get(123).Returns(new Customer());
+
+
 
             order.ContainsUniqueSkus().Returns(true);
             order.AllProductsInStock().Returns(true);  // TODO: Eackeghasdfag, can't get away with this: DI problem
