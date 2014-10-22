@@ -7,3 +7,5 @@ C:\git\OrderEntryMockingPractice\OrderEntryMockingPracticeTests\bin\Debug\nunit.
 C:\git\OrderEntryMockingPractice\OrderEntryMockingPracticeTests\obj\Debug\OrderEntryMockingPracticeTests.csprojResolveAssemblyReference.cache
 C:\git\OrderEntryMockingPractice\OrderEntryMockingPracticeTests\obj\Debug\OrderEntryMockingPracticeTests.dll
 C:\git\OrderEntryMockingPractice\OrderEntryMockingPracticeTests\obj\Debug\OrderEntryMockingPracticeTests.pdb
+C:\git\OrderEntryMockingPractice\OrderEntryMockingPracticeTests\bin\Debug\NSubstitute.dll
+C:\git\OrderEntryMockingPractice\OrderEntryMockingPracticeTests\bin\Debug\NSubstitute.xml
