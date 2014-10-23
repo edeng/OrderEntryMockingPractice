@@ -18,7 +18,8 @@ namespace OrderEntryMockingPracticeTests
             this.OrderFulfillmentService = Substitute.For<IOrderFulfillmentService>();
             this.TaxRateService = Substitute.For<ITaxRateService>();
             this.CustomerRepository = Substitute.For<ICustomerRepository>();
-            this.OrderService = new OrderService(ProductRepository, OrderFulfillmentService, TaxRateService, CustomerRepository);            
+            this.EmailService = Substitute.For<IEmailService>();
+            this.OrderService = new OrderService(ProductRepository, OrderFulfillmentService, TaxRateService, CustomerRepository, EmailService);            
         }
 
         public OrderService OrderService { get; set; }
@@ -31,19 +32,27 @@ namespace OrderEntryMockingPracticeTests
 
         public ITaxRateService TaxRateService { get; set; }
 
+        public IEmailService EmailService { get; set; }
+
         [Test]
         public void ValidOrder()
         {
             // Arrange
             const int customerId = 123;
+            const int orderId = 500;
 
             var order = Substitute.For<Order>();
             order.CustomerId = customerId;
 
-            OrderFulfillmentService.Fulfill(order).Returns(new OrderConfirmation());
-            CustomerRepository.Get(customerId).Returns(new Customer());
+            CustomerRepository.Get(customerId).Returns(new Customer()
+            {
+                CustomerId = customerId
+            });
 
-
+            OrderFulfillmentService.Fulfill(order).Returns(new OrderConfirmation()
+            {
+                OrderId = orderId
+            });
 
             order.ContainsUniqueSkus().Returns(true);
             order.AllProductsInStock().Returns(true);  // TODO: Eackeghasdfag, can't get away with this: DI problem
@@ -93,7 +102,10 @@ namespace OrderEntryMockingPracticeTests
             order.ContainsUniqueSkus().Returns(true);
             order.AllProductsInStock().Returns(true);
 
-            CustomerRepository.Get(customerId).Returns(new Customer()); 
+            CustomerRepository.Get(customerId).Returns(new Customer()
+            {
+                CustomerId = customerId
+            }); 
 
 
 
@@ -101,9 +113,7 @@ namespace OrderEntryMockingPracticeTests
             {
                 OrderNumber = expectedOrderNumber, 
                 OrderId = expectedOrderId
-            });
-
-            
+            });        
 
             // Act
             var summary = OrderService.PlaceOrder(order);
@@ -122,19 +132,24 @@ namespace OrderEntryMockingPracticeTests
             const int customerId = 123;
             const string postalCode = "98105";
             const string country = "USA";
-            const string expectedDescription = "Expected Description"; 
+            const string expectedDescription = "Expected Description";
+            const int orderId = 500;
 
             var order = Substitute.For<Order>();
             order.ContainsUniqueSkus().Returns(true);
             order.AllProductsInStock().Returns(true);
             order.CustomerId = customerId;
 
-            OrderFulfillmentService.Fulfill(order).Returns(new OrderConfirmation());
+            OrderFulfillmentService.Fulfill(order).Returns(new OrderConfirmation()
+            {
+                OrderId = orderId
+            });
 
             CustomerRepository.Get(customerId).Returns(new Customer()
             {
                 PostalCode = postalCode,
-                Country = country
+                Country = country,
+                CustomerId = customerId
             });
 
             var taxEntries = new List<TaxEntry>()
@@ -179,14 +194,22 @@ namespace OrderEntryMockingPracticeTests
             const decimal expectedNetTotal = (price1*quantity1) + (price2*quantity2);
 
             const int customerId = 123;
+            const int orderId = 400;
 
             var order = Substitute.For<Order>();
             order.ContainsUniqueSkus().Returns(true);
             order.AllProductsInStock().Returns(true);
             order.CustomerId = customerId;
 
-            OrderFulfillmentService.Fulfill(order).Returns(new OrderConfirmation());
-            CustomerRepository.Get(customerId).Returns(new Customer());
+            CustomerRepository.Get(customerId).Returns(new Customer()
+            {
+                CustomerId = customerId
+            });
+
+            OrderFulfillmentService.Fulfill(order).Returns(new OrderConfirmation()
+            {
+                OrderId = orderId
+            });
 
 
             var orderEntries = new List<OrderItem>()
@@ -231,7 +254,7 @@ namespace OrderEntryMockingPracticeTests
             const decimal rate1 = 0.15m;
             const string postalCode = "98105";
             const string country = "USA";
-            const string expectedDescription = "Expected Description"; 
+            const int orderId = 123;
             const decimal expectedOrderTotal = ((price1 * quantity1) + (price2 * quantity2)) * rate1;
 
             const int customerId = 123;
@@ -241,12 +264,16 @@ namespace OrderEntryMockingPracticeTests
             order.AllProductsInStock().Returns(true);
             order.CustomerId = customerId;
 
-            OrderFulfillmentService.Fulfill(order).Returns(new OrderConfirmation());
+            OrderFulfillmentService.Fulfill(order).Returns(new OrderConfirmation()
+            {
+                OrderId = orderId
+            });
 
             CustomerRepository.Get(customerId).Returns(new Customer()
             {
                 PostalCode = postalCode,
-                Country = country
+                Country = country,
+                CustomerId = customerId
             });
 
             var taxEntries = new List<TaxEntry>()
@@ -290,5 +317,33 @@ namespace OrderEntryMockingPracticeTests
             Assert.That(summary.Total, Is.EqualTo(expectedOrderTotal));
         }
 
+        [Test]
+        public void EmailConfirmationSent()
+        {
+            // Arrange
+            const int customerId = 123;
+            const int orderId = 500;
+
+            var order = Substitute.For<Order>();
+            order.ContainsUniqueSkus().Returns(true);
+            order.AllProductsInStock().Returns(true);
+            order.CustomerId = customerId;
+
+            CustomerRepository.Get(customerId).Returns(new Customer()
+            {
+                CustomerId = customerId
+            });
+
+            OrderFulfillmentService.Fulfill(order).Returns(new OrderConfirmation()
+            {
+                OrderId = orderId
+            });
+
+            // Act
+            OrderService.PlaceOrder(order);
+
+            // Assert
+            EmailService.Received().SendOrderConfirmationEmail(customerId, orderId);
+        }
     }
 }
