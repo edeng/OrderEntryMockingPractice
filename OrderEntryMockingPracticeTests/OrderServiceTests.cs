@@ -35,13 +35,13 @@ namespace OrderEntryMockingPracticeTests
         public void ValidOrder()
         {
             // Arrange
-            var customerId = 123;
+            const int customerId = 123;
 
             var order = Substitute.For<Order>();
-            order.CustomerId = 123;
+            order.CustomerId = customerId;
 
             OrderFulfillmentService.Fulfill(order).Returns(new OrderConfirmation());
-            CustomerRepository.Get(123).Returns(new Customer());
+            CustomerRepository.Get(customerId).Returns(new Customer());
 
 
 
@@ -56,7 +56,7 @@ namespace OrderEntryMockingPracticeTests
         public void OrderItemsAreNotUniqueByProductSku_TheOrderIsInvalid()
         {
             // Arrange
-            Order order = Substitute.For<Order>();
+            var order = Substitute.For<Order>();
 
 
             order.ContainsUniqueSkus().Returns(false);
@@ -70,7 +70,7 @@ namespace OrderEntryMockingPracticeTests
         public void AllProductsNotInStock_ThenOrderIsInValid()
         {
             // Arrange
-            Order order = Substitute.For<Order>();
+            var order = Substitute.For<Order>();
 
 
             order.ContainsUniqueSkus().Returns(true);
@@ -167,5 +167,128 @@ namespace OrderEntryMockingPracticeTests
                 Assert.That(actual.Rate, Is.EqualTo(expected.Rate));
             }
         }
+
+        [Test]
+        public void ValidNetTotal()
+        {
+            // Arrange
+            const decimal price1 = 10.00m;
+            const int quantity1 = 3;
+            const decimal price2 = 1.25m;
+            const int quantity2 = 5; 
+            const decimal expectedNetTotal = (price1*quantity1) + (price2*quantity2);
+
+            const int customerId = 123;
+
+            var order = Substitute.For<Order>();
+            order.ContainsUniqueSkus().Returns(true);
+            order.AllProductsInStock().Returns(true);
+            order.CustomerId = customerId;
+
+            OrderFulfillmentService.Fulfill(order).Returns(new OrderConfirmation());
+            CustomerRepository.Get(customerId).Returns(new Customer());
+
+
+            var orderEntries = new List<OrderItem>()
+            {
+                new OrderItem()
+                {
+                    Product = new Product()
+                    {
+                        Price = price1
+                    },
+ 
+                    Quantity = quantity1
+                }, 
+
+                new OrderItem()
+                {
+                    Product = new Product()
+                    {
+                        Price = price2
+                    }, 
+                    Quantity = quantity2
+                }
+            };
+
+            order.OrderItems = orderEntries; 
+
+            // Act
+            var summary = OrderService.PlaceOrder(order);
+
+            // Assert 
+            Assert.That(summary.NetTotal, Is.EqualTo(expectedNetTotal));
+        }
+
+        [Test]
+        public void ValidOrderTotal()
+        {
+            // Arrange
+            const decimal price1 = 10.00m;
+            const int quantity1 = 3;
+            const decimal price2 = 1.25m;
+            const int quantity2 = 5;
+            const decimal rate1 = 0.15m;
+            const string postalCode = "98105";
+            const string country = "USA";
+            const string expectedDescription = "Expected Description"; 
+            const decimal expectedOrderTotal = ((price1 * quantity1) + (price2 * quantity2)) * rate1;
+
+            const int customerId = 123;
+
+            var order = Substitute.For<Order>();
+            order.ContainsUniqueSkus().Returns(true);
+            order.AllProductsInStock().Returns(true);
+            order.CustomerId = customerId;
+
+            OrderFulfillmentService.Fulfill(order).Returns(new OrderConfirmation());
+
+            CustomerRepository.Get(customerId).Returns(new Customer()
+            {
+                PostalCode = postalCode,
+                Country = country
+            });
+
+            var taxEntries = new List<TaxEntry>()
+            {
+                new TaxEntry()
+                {
+                    Rate = rate1
+                }
+            };
+
+            TaxRateService.GetTaxEntries(postalCode, country).Returns(taxEntries);
+
+            var orderEntries = new List<OrderItem>()
+            {
+                new OrderItem()
+                {
+                    Product = new Product()
+                    {
+                        Price = price1
+                    },
+ 
+                    Quantity = quantity1
+                }, 
+
+                new OrderItem()
+                {
+                    Product = new Product()
+                    {
+                        Price = price2
+                    }, 
+                    Quantity = quantity2
+                }
+            };
+
+            order.OrderItems = orderEntries;
+
+            // Act
+            var summary = OrderService.PlaceOrder(order);
+
+            // Assert 
+            Assert.That(summary.Total, Is.EqualTo(expectedOrderTotal));
+        }
+
     }
 }

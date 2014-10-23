@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using OrderEntryMockingPractice.Models;
 
 namespace OrderEntryMockingPractice.Services
@@ -26,15 +27,21 @@ namespace OrderEntryMockingPractice.Services
                 throw new Exception("Order is invalid");
 
             var orderConfirmation = _orderFulfillmentService.Fulfill(order);
+            var netTotal = order.OrderItems.Sum(orderItem => orderItem.Quantity * orderItem.Product.Price);
+
+            var customer = _customerRepository.Get(order.CustomerId.Value);
+            var taxes = _taxRateService.GetTaxEntries(customer.PostalCode, customer.Country);
+            var total = taxes.Sum(taxEntry => netTotal*taxEntry.Rate);
+
             var orderSummary = new OrderSummary
             {
                 OrderNumber = orderConfirmation.OrderNumber,
-                OrderId = orderConfirmation.OrderId
+                OrderId = orderConfirmation.OrderId,
+                NetTotal = netTotal,
+                Taxes = taxes,
+                Total = total
             };
 
-
-            var customer = _customerRepository.Get(order.CustomerId.Value);
-            orderSummary.Taxes = _taxRateService.GetTaxEntries(customer.PostalCode, customer.Country);
 
             return orderSummary;
         }
