@@ -2,7 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
-using NSubstitute; 
+using NSubstitute;
+using OrderEntryMockingPractice;
 using OrderEntryMockingPractice.Models;
 using OrderEntryMockingPractice.Services;
 
@@ -117,7 +118,25 @@ namespace OrderEntryMockingPracticeTests
 
 
             // Assert
-            Assert.Throws<Exception>(() => OrderService.PlaceOrder(order));
+            try
+            {
+
+                OrderService.PlaceOrder(order);
+            }
+            catch (ValidationException vex)
+            {
+                Assert.That(vex.Message, Is.EqualTo("All skus are not unique."));
+                Assert.That(vex.Messages, Has.Count.EqualTo(1));
+                Assert.That(vex.Messages.First(), Is.EqualTo(vex.Message));
+                return;
+            }
+            catch (Exception e)
+            {
+                Assert.Fail("Incorrect exception thrown: {0}; {1}", e.GetType(), e.Message);
+            }
+
+            Assert.Fail("No ValidationException was thrown.");
+
         }
 
         [Test]
@@ -151,10 +170,79 @@ namespace OrderEntryMockingPracticeTests
             ProductRepository.IsInStock(sku1).Returns(false);
             ProductRepository.IsInStock(sku2).Returns(true);
 
-            order.OrderItems = orderEntries; 
+            order.OrderItems = orderEntries;
 
             // Assert
-            Assert.Throws<Exception>(() => OrderService.PlaceOrder(order));
+            try
+            {
+
+                OrderService.PlaceOrder(order);
+            }
+            catch (ValidationException vex)
+            {
+                Assert.That(vex.Message, Is.EqualTo("One or more items are not in stock."));
+                Assert.That(vex.Messages, Has.Count.EqualTo(1));
+                Assert.That(vex.Messages.First(), Is.EqualTo(vex.Message));
+                return;
+            }
+            catch (Exception e)
+            {
+                Assert.Fail("Incorrect exception thrown: {0}; {1}", e.GetType(), e.Message);
+            }
+
+            Assert.Fail("No ValidationException was thrown.");
+        }
+
+        [Test]
+        public void AllProductsNotInStockAndSkusAreNotUnique_ThenOrderIsInValid()
+        {
+            // Arrange
+            const string sku = "1234";
+
+            var order = Substitute.For<Order>();
+
+            var orderEntries = new List<OrderItem>()
+            {
+                new OrderItem()
+                {
+                    Product = new Product()
+                    {
+                        Sku = sku
+                    },
+                }, 
+
+                new OrderItem()
+                {
+                    Product = new Product()
+                    {
+                        Sku = sku
+                    }, 
+                }
+            };
+
+            ProductRepository.IsInStock(sku).Returns(false);
+
+            order.OrderItems = orderEntries;
+
+            // Assert
+            try
+            {
+
+                OrderService.PlaceOrder(order);
+            }
+            catch (ValidationException vex)
+            {
+                Assert.That(vex.Messages, Has.Count.EqualTo(2));
+                Assert.That(vex.Messages.Contains("One or more items are not in stock."));
+                Assert.That(vex.Messages.Contains("All skus are not unique."));
+                return;
+            }
+            catch (Exception e)
+            {
+                Assert.Fail("Incorrect exception thrown: {0}; {1}", e.GetType(), e.Message);
+            }
+
+            Assert.Fail("No ValidationException was thrown.");
         }
 
         [Test]

@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
 using OrderEntryMockingPractice.Models;
 
@@ -23,9 +25,8 @@ namespace OrderEntryMockingPractice.Services
 
         public OrderSummary PlaceOrder(Order order)
         {
-            if (NotValidOrder(order))
-                throw new Exception("Order is invalid");
-
+            AssertIsValid(order);
+            
             var orderConfirmation = _orderFulfillmentService.Fulfill(order);
             var netTotal = order.OrderItems.Sum(orderItem => orderItem.Quantity * orderItem.Product.Price);
 
@@ -48,8 +49,10 @@ namespace OrderEntryMockingPractice.Services
             return orderSummary;
         }
 
-        public bool NotValidOrder(Order order)
+        private void AssertIsValid(Order order)
         {
+            var messages = new List<string>();
+
             var itemNotInStock =
                 order.OrderItems.Select(orderItem => _productRepository.IsInStock(orderItem.Product.Sku))
                     .Any(inStock => !inStock);
@@ -57,9 +60,20 @@ namespace OrderEntryMockingPractice.Services
             var skus = order.OrderItems.Select(orderItem => orderItem.Product.Sku).ToList();
             var skusAreNotUnique = skus.Distinct().Count() != skus.Count();
 
-            var result = itemNotInStock || skusAreNotUnique;
+            if (itemNotInStock)
+            {
+                messages.Add("One or more items are not in stock.");
+            }
 
-            return result;
+            if (skusAreNotUnique)
+            {
+                messages.Add("All skus are not unique.");
+            }
+
+            if (messages.Any())
+            {
+                throw new ValidationException(messages);
+            }
         }
     }
 }
