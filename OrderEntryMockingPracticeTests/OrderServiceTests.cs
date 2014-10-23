@@ -40,6 +40,8 @@ namespace OrderEntryMockingPracticeTests
             // Arrange
             const int customerId = 123;
             const int orderId = 500;
+            const string sku1 = "1234";
+            const string sku2 = "4567";
 
             var order = Substitute.For<Order>();
             order.CustomerId = customerId;
@@ -54,8 +56,29 @@ namespace OrderEntryMockingPracticeTests
                 OrderId = orderId
             });
 
-            order.ContainsUniqueSkus().Returns(true);
-            order.AllProductsInStock().Returns(true);  // TODO: Eackeghasdfag, can't get away with this: DI problem
+            var orderEntries = new List<OrderItem>()
+            {
+                new OrderItem()
+                {
+                    Product = new Product()
+                    {
+                        Sku = sku1
+                    },
+                }, 
+
+                new OrderItem()
+                {
+                    Product = new Product()
+                    {
+                        Sku = sku2
+                    }, 
+                }
+            };
+
+            ProductRepository.IsInStock(sku1).Returns(true);
+            ProductRepository.IsInStock(sku2).Returns(true);
+
+            order.OrderItems = orderEntries; 
 
             // Act / Assert
             Assert.DoesNotThrow(() => OrderService.PlaceOrder(order));
@@ -65,11 +88,33 @@ namespace OrderEntryMockingPracticeTests
         public void OrderItemsAreNotUniqueByProductSku_TheOrderIsInvalid()
         {
             // Arrange
+            const string sku = "123";
+
             var order = Substitute.For<Order>();
 
+            var orderEntries = new List<OrderItem>()
+            {
+                new OrderItem()
+                {
+                    Product = new Product()
+                    {
+                        Sku = sku
+                    },
+                }, 
 
-            order.ContainsUniqueSkus().Returns(false);
-            order.AllProductsInStock().Returns(true);
+                new OrderItem()
+                {
+                    Product = new Product()
+                    {
+                        Sku = sku
+                    }, 
+                }
+            };
+
+            order.OrderItems = orderEntries; 
+
+            ProductRepository.IsInStock(sku).Returns(true);
+
 
             // Assert
             Assert.Throws<Exception>(() => OrderService.PlaceOrder(order));
@@ -79,11 +124,34 @@ namespace OrderEntryMockingPracticeTests
         public void AllProductsNotInStock_ThenOrderIsInValid()
         {
             // Arrange
+            const string sku1 = "1234";
+            const string sku2 = "45456"; 
+
             var order = Substitute.For<Order>();
 
+            var orderEntries = new List<OrderItem>()
+            {
+                new OrderItem()
+                {
+                    Product = new Product()
+                    {
+                        Sku = sku1
+                    },
+                }, 
 
-            order.ContainsUniqueSkus().Returns(true);
-            order.AllProductsInStock().Returns(false);
+                new OrderItem()
+                {
+                    Product = new Product()
+                    {
+                        Sku = sku2
+                    }, 
+                }
+            };
+
+            ProductRepository.IsInStock(sku1).Returns(false);
+            ProductRepository.IsInStock(sku2).Returns(true);
+
+            order.OrderItems = orderEntries; 
 
             // Assert
             Assert.Throws<Exception>(() => OrderService.PlaceOrder(order));
@@ -99,15 +167,11 @@ namespace OrderEntryMockingPracticeTests
             
             var order = Substitute.For<Order>();
             order.CustomerId = customerId;
-            order.ContainsUniqueSkus().Returns(true);
-            order.AllProductsInStock().Returns(true);
 
             CustomerRepository.Get(customerId).Returns(new Customer()
             {
                 CustomerId = customerId
             }); 
-
-
 
             OrderFulfillmentService.Fulfill(order).Returns(new OrderConfirmation()
             {
@@ -136,8 +200,6 @@ namespace OrderEntryMockingPracticeTests
             const int orderId = 500;
 
             var order = Substitute.For<Order>();
-            order.ContainsUniqueSkus().Returns(true);
-            order.AllProductsInStock().Returns(true);
             order.CustomerId = customerId;
 
             OrderFulfillmentService.Fulfill(order).Returns(new OrderConfirmation()
@@ -173,7 +235,7 @@ namespace OrderEntryMockingPracticeTests
 
             // Assert
             Assert.That(summary.Taxes.Count(), Is.EqualTo(taxEntries.Count));
-            for (int i = 0; i < taxEntries.Count; i++)
+            for (var i = 0; i < taxEntries.Count; i++)
             {
                 var expected = taxEntries[i];
                 var actual = summary.Taxes.ElementAt(i);
@@ -190,15 +252,15 @@ namespace OrderEntryMockingPracticeTests
             const decimal price1 = 10.00m;
             const int quantity1 = 3;
             const decimal price2 = 1.25m;
-            const int quantity2 = 5; 
+            const int quantity2 = 5;
+            const string sku1 = "1234";
+            const string sku2 = "23424";
             const decimal expectedNetTotal = (price1*quantity1) + (price2*quantity2);
 
             const int customerId = 123;
             const int orderId = 400;
 
             var order = Substitute.For<Order>();
-            order.ContainsUniqueSkus().Returns(true);
-            order.AllProductsInStock().Returns(true);
             order.CustomerId = customerId;
 
             CustomerRepository.Get(customerId).Returns(new Customer()
@@ -218,7 +280,8 @@ namespace OrderEntryMockingPracticeTests
                 {
                     Product = new Product()
                     {
-                        Price = price1
+                        Price = price1,
+                        Sku = sku1
                     },
  
                     Quantity = quantity1
@@ -228,11 +291,15 @@ namespace OrderEntryMockingPracticeTests
                 {
                     Product = new Product()
                     {
-                        Price = price2
+                        Price = price2,
+                        Sku = sku2
                     }, 
                     Quantity = quantity2
                 }
             };
+
+            ProductRepository.IsInStock(sku1).Returns(true);
+            ProductRepository.IsInStock(sku2).Returns(true);
 
             order.OrderItems = orderEntries; 
 
@@ -255,13 +322,13 @@ namespace OrderEntryMockingPracticeTests
             const string postalCode = "98105";
             const string country = "USA";
             const int orderId = 123;
+            const string sku1 = "1234";
+            const string sku2 = "23424";
             const decimal expectedOrderTotal = ((price1 * quantity1) + (price2 * quantity2)) * rate1;
 
             const int customerId = 123;
 
             var order = Substitute.For<Order>();
-            order.ContainsUniqueSkus().Returns(true);
-            order.AllProductsInStock().Returns(true);
             order.CustomerId = customerId;
 
             OrderFulfillmentService.Fulfill(order).Returns(new OrderConfirmation()
@@ -292,7 +359,8 @@ namespace OrderEntryMockingPracticeTests
                 {
                     Product = new Product()
                     {
-                        Price = price1
+                        Price = price1,
+                        Sku = sku1
                     },
  
                     Quantity = quantity1
@@ -302,11 +370,15 @@ namespace OrderEntryMockingPracticeTests
                 {
                     Product = new Product()
                     {
-                        Price = price2
+                        Price = price2,
+                        Sku = sku2
                     }, 
                     Quantity = quantity2
                 }
             };
+
+            ProductRepository.IsInStock(sku1).Returns(true);
+            ProductRepository.IsInStock(sku2).Returns(true);
 
             order.OrderItems = orderEntries;
 
@@ -325,8 +397,6 @@ namespace OrderEntryMockingPracticeTests
             const int orderId = 500;
 
             var order = Substitute.For<Order>();
-            order.ContainsUniqueSkus().Returns(true);
-            order.AllProductsInStock().Returns(true);
             order.CustomerId = customerId;
 
             CustomerRepository.Get(customerId).Returns(new Customer()

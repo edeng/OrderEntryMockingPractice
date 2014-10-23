@@ -23,8 +23,7 @@ namespace OrderEntryMockingPractice.Services
 
         public OrderSummary PlaceOrder(Order order)
         {
-            var isvalid = order.ContainsUniqueSkus() && order.AllProductsInStock();
-            if (!isvalid)
+            if (NotValidOrder(order))
                 throw new Exception("Order is invalid");
 
             var orderConfirmation = _orderFulfillmentService.Fulfill(order);
@@ -47,6 +46,20 @@ namespace OrderEntryMockingPractice.Services
             _emailService.SendOrderConfirmationEmail(customer.CustomerId.Value, orderId);
 
             return orderSummary;
+        }
+
+        public bool NotValidOrder(Order order)
+        {
+            var itemNotInStock =
+                order.OrderItems.Select(orderItem => _productRepository.IsInStock(orderItem.Product.Sku))
+                    .Any(inStock => !inStock);
+
+            var skus = order.OrderItems.Select(orderItem => orderItem.Product.Sku).ToList();
+            var skusAreNotUnique = skus.Distinct().Count() != skus.Count();
+
+            var result = itemNotInStock || skusAreNotUnique;
+
+            return result;
         }
     }
 }

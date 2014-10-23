@@ -12,16 +12,5 @@ namespace OrderEntryMockingPractice.Models
         
         public int? CustomerId { get; set; }
         public List<OrderItem> OrderItems { get; set; }
-
-        public virtual bool ContainsUniqueSkus()
-        {
-            return true;
-        }
-
-        public virtual bool AllProductsInStock()
-        {
-            return true; 
-        }
-
     }
 }
